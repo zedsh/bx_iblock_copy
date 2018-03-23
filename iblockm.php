@@ -78,7 +78,14 @@
         $arFields = CIBlock::GetArrayByID($IBLOCK_ID);
         $arFields["GROUP_ID"] = CIBlock::GetGroupPermissions($IBLOCK_ID);
         $props = get_iblock_properties($IBLOCK_ID); 
-        return array('arFields' => $arFields, 'properties' => $props['properties']);
+        $iblock_linked_props = [];
+        foreach($props['properties'] as $prop){
+            if($prop['PROPERTY_TYPE'] == 'E'){
+                $iblock_linked_props[] = $prop['CODE'];
+            }
+            
+        }
+        return array('arFields' => $arFields, 'properties' => $props['properties'],'iblock_linked_props' => $iblock_linked_props);
     }
     
     
@@ -428,7 +435,7 @@
         return true;
    }
 
-   function copy_iblock($all_iblocks,$IBLOCK_ID,$REPLACE,$MAP_IBLOCKS)
+   function copy_iblock($all_iblocks,$IBLOCK_ID,$REPLACE,$MAP_IBLOCKS,&$MAP_ELEMENTS)
    {
        
        $data = make_iblock(
@@ -502,6 +509,18 @@
             $element['DETAIL_PICTURE'] = process_file_field($element['DETAIL_PICTURE']);
             $element['PREVIEW_PICTURE'] = process_file_field($element['PREVIEW_PICTURE']);
 
+            foreach($all_iblocks['structures'][$IBLOCK_ID]['iblock_linked_props'] as $prop_code){
+                if(!empty($element[$prop_code])){
+                    if(!isset($MAP_ELEMENTS[$element[$prop_code]])){
+                        to_log("ERROR with element link on prop $prop_code:".$result_element['error']);
+                        to_log($element);
+                        exit();
+                    }
+                    $element[$prop_code] = $MAP_ELEMENTS[$element[$prop_code]];
+
+                }
+            }
+            
             $result_element = make_element($element,array(
                 'IBLOCK_ID' => $NEW_IBLOCK_ID,
             ));
@@ -511,6 +530,9 @@
                 to_log($element);
                 exit;
             }
+            
+            $MAP_ELEMENTS[$element['ID']] = $result_element;
+            
        }
        
        change_iblock($data);
@@ -610,21 +632,23 @@
       // to_log($all_iblocks['map']);
       // exit;
 
-       
+       echo "<pre>";
        $all_iblocks = get_all_iblocks();
-       
-       $new_iblocks = array();
+       print_r($all_iblocks);
+       echo "</pre>";
+   }    
+   //    $new_iblocks = array();
 
-       foreach($iblocks as $iblock){
-            $REPLACE = array('IBLOCK_TYPE_ID' => 'en','LID' => 'en');
+   //    foreach($iblocks as $iblock){
+   //         $REPLACE = array('IBLOCK_TYPE_ID' => 'en','LID' => 'en');
 
-            $ret = copy_iblock($all_iblocks,$iblock,$REPLACE,$new_iblocks);
-            $new_iblocks[$iblock] = $ret['IBLOCK_ID'];
-       }
+   //         $ret = copy_iblock($all_iblocks,$iblock,$REPLACE,$new_iblocks);
+   //         $new_iblocks[$iblock] = $ret['IBLOCK_ID'];
+   //    }
 
-        to_log("NEW_IBLOCKS:");
-        to_log($new_iblocks);
-   }
+   //     to_log("NEW_IBLOCKS:");
+   //     to_log($new_iblocks);
+   //}
    
    
 
